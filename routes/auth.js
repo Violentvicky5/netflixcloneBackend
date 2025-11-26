@@ -8,8 +8,8 @@ const crypto = require("crypto");
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: process.env.EMAIL_USER,  
-    pass: process.env.EMAIL_PASS,  
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
   },
 });
 
@@ -26,7 +26,7 @@ router.post("/register", async (req, res) => {
     user = new User({ email, password, token });
     await user.save();
 
-const verifyURL = `${process.env.BACKEND_URL}/verify/${token}`;
+    const verifyURL = `${process.env.BACKEND_URL}/verify/${token}`;
 
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
@@ -58,6 +58,37 @@ router.get("/verify/:token", async (req, res) => {
   } catch (error) {
     console.error(error);
     res.send("Verification Failed");
+  }
+});
+
+router.post("/signin", async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(400).json({ msg: "Invalid Email or Password" });
+    }
+
+    if (!user.isVerified) {
+      return res.status(401).json({ msg: "Please verify your email first" });
+    }
+
+    if (user.password !== password) {
+      return res.status(400).json({ msg: "Invalid Email or Password" });
+    }
+
+    return res.json({
+      msg: "Login Successful",
+      user: {
+        id: user._id,
+        email: user.email,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Server Error");
   }
 });
 
