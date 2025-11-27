@@ -61,6 +61,7 @@ router.get("/verify/:token", async (req, res) => {
   }
 });
 
+//SignIn Route
 router.post("/signin", async (req, res) => {
   const { email, password } = req.body;
 
