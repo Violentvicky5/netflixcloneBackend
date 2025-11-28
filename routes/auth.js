@@ -3,7 +3,7 @@ const router = express.Router();
 const User = require("../models/netflixUser");
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
-
+const bcrypt = require("bcryptjs");
 
 // Email Transporter
 const transporter = nodemailer.createTransport({
@@ -14,22 +14,25 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Register Route
+
+// REGISTER
 router.post("/register", async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    let existingUser = await User.findOne({ email });
-    if (existingUser) return res.status(400).json({ msg: "Email already exists" });
+    let existing = await User.findOne({ email });
+    if (existing) return res.status(400).json({ msg: "Email already exists" });
+
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     const token = crypto.randomBytes(32).toString("hex");
-    const tokenExpiry = Date.now() + 15 * 60 * 1000; // 15 mins
+    const tokenExpiry = Date.now() + 15 * 60 * 1000;
 
     const user = new User({
       email,
-      password,
+      password: hashedPassword,
       token,
-      tokenExpiry
+      tokenExpiry,
     });
 
     await user.save();
@@ -41,7 +44,7 @@ router.post("/register", async (req, res) => {
       to: email,
       subject: "Verify Your Email",
       html: `<h2>NetflixClone - Email Verification</h2>
-             <a href="${verifyURL}">Click Here to Verify</a>`
+             <a href="${verifyURL}">Click to Verify</a>`,
     });
 
     res.json({ msg: "Verification email sent" });
@@ -53,18 +56,17 @@ router.post("/register", async (req, res) => {
 });
 
 
-// Verify Route
+// VERIFY EMAIL
 router.get("/verify/:token", async (req, res) => {
   try {
     const user = await User.findOne({ token: req.params.token });
-
     if (!user) return res.send("Invalid token");
 
     if (user.tokenExpiry < Date.now()) {
       user.token = "";
       user.tokenExpiry = null;
       await user.save();
-      return res.send("Verification link expired. Please register again.");
+      return res.send("Verification link expired. Register again.");
     }
 
     user.isVerified = true;
@@ -80,32 +82,30 @@ router.get("/verify/:token", async (req, res) => {
   }
 });
 
-//SignIn Route
+
+// SIGNIN
 router.post("/signin", async (req, res) => {
   const { email, password } = req.body;
 
   try {
     const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ msg: "Invalid Email or Password" });
 
-    if (!user) {
-      return res.status(400).json({ msg: "Invalid Email or Password" });
-    }
-
-    if (!user.isVerified) {
+    if (!user.isVerified)
       return res.status(401).json({ msg: "Please verify your email first" });
-    }
 
-    if (user.password !== password) {
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch)
       return res.status(400).json({ msg: "Invalid Email or Password" });
-    }
 
-    return res.json({
+    res.json({
       msg: "Login Successful",
       user: {
         id: user._id,
         email: user.email,
       },
     });
+
   } catch (error) {
     console.error(error);
     res.status(500).send("Server Error");
@@ -113,20 +113,23 @@ router.post("/signin", async (req, res) => {
 });
 
 
-// Forgot Password Route (Send reset link)
+// FORGOT PASSWORD send reset link
 router.post("/forgotpassword", async (req, res) => {
   const { email } = req.body;
 
   try {
     const user = await User.findOne({ email });
-
     if (!user) return res.status(400).json({ msg: "No user found with this email" });
-    if (!user.isVerified) return res.status(401).json({ msg: "Please verify your email first" });
+
+    if (!user.isVerified) {
+      return res.status(401).json({ msg: "Please verify your email first" });
+    }
 
     const resetToken = crypto.randomBytes(32).toString("hex");
 
     user.resetToken = resetToken;
     user.resetTokenExpiry = Date.now() + 15 * 60 * 1000;
+
     await user.save();
 
     const resetURL = `${process.env.BACKEND_URL}/resetverify/${resetToken}`;
@@ -134,13 +137,15 @@ router.post("/forgotpassword", async (req, res) => {
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: email,
-      subject: "NetflixClone - Reset Password",
-      html: `<h2>Password Reset Request</h2>
-             <p>This link expires in 15 minutes.</p>
-             <a href="${resetURL}">View your old password</a>`
+      subject: "Reset Password",
+      html: `
+        <h2>Password Reset Link</h2>
+        <p>This link expires in 15 minutes.</p>
+        <a href="${resetURL}">Click to generate a new password</a>
+      `,
     });
 
-    res.json({ msg: "Password reset email sent" });
+    res.json({ msg: "Reset link sent to email" });
 
   } catch (error) {
     console.error(error);
@@ -149,33 +154,45 @@ router.post("/forgotpassword", async (req, res) => {
 });
 
 
-// Reset Verify Route 
+
+// RESET VERIFY → show temporary password
 router.get("/resetverify/:resetToken", async (req, res) => {
   try {
     const user = await User.findOne({ resetToken: req.params.resetToken });
 
-    if (!user) return res.send("Invalid token");
+    if (!user) return res.send("Invalid or expired link");
 
     if (user.resetTokenExpiry < Date.now()) {
       user.resetToken = "";
       user.resetTokenExpiry = null;
       await user.save();
-      return res.send("Password reset link expired.");
+      return res.send("Reset link expired");
     }
 
-    const password = user.password;
+    const plainNewPass = crypto.randomBytes(3).toString("hex"); 
 
+    const hashedPass = await bcrypt.hash(plainNewPass, 10);
+
+    
+    user.password = hashedPass;
     user.resetToken = "";
     user.resetTokenExpiry = null;
     await user.save();
 
-    res.send(`Your password is: ${password}`);
+    
+    res.send(`
+      <h2>Password Reset Successful</h2>
+      <p>Your new password is:</p>
+      <h3>${plainNewPass}</h3>
+      <p>Please logIn using above Password</p>
+    `);
 
   } catch (error) {
     console.error(error);
-    res.send("Reset verification failed");
+    res.send("Reset failed");
   }
 });
+
 
 
 module.exports = router;
