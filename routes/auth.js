@@ -4,6 +4,7 @@ const User = require("../models/netflixUser");
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
+ const jwt = require("jsonwebtoken");
 
 // Email Transporter
 const transporter = nodemailer.createTransport({
@@ -51,7 +52,7 @@ router.post("/register", async (req, res) => {
 
   } catch (error) {
     console.error(error);
-    res.status(500).send("Server Error");
+res.status(500).json({ msg: "Server Error" });
   }
 });
 
@@ -98,8 +99,16 @@ router.post("/signin", async (req, res) => {
     if (!isMatch)
       return res.status(400).json({ msg: "Invalid Email or Password" });
 
+
+    const token = jwt.sign(
+      { id: user._id, email: user.email }, 
+      process.env.JWT_SECRET, 
+      { expiresIn: "1h" }
+    );
+
     res.json({
       msg: "Login Successful",
+      token,
       user: {
         id: user._id,
         email: user.email,
@@ -108,7 +117,7 @@ router.post("/signin", async (req, res) => {
 
   } catch (error) {
     console.error(error);
-    res.status(500).send("Server Error");
+res.status(500).json({ msg: "Server Error" });
   }
 });
 
@@ -149,13 +158,13 @@ router.post("/forgotpassword", async (req, res) => {
 
   } catch (error) {
     console.error(error);
-    res.status(500).send("Server Error");
+res.status(500).json({ msg: "Server Error" });
   }
 });
 
 
 
-// RESET VERIFY → show temporary password
+// RESET VERIFY show temporary password
 router.get("/resetverify/:resetToken", async (req, res) => {
   try {
     const user = await User.findOne({ resetToken: req.params.resetToken });
