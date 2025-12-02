@@ -121,6 +121,24 @@ res.status(500).json({ msg: "Server Error" });
   }
 });
 
+// SIGNOUT
+router.post("/signOut", async (req, res) => {
+  try {
+    const authHeader = req.headers["authorization"];
+    if (!authHeader) return res.status(401).json({ msg: "Token missing" });
+
+    const token = authHeader.split(" ")[1];
+
+    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+      if (err) return res.status(403).json({ msg: "Token invalid" });
+      return res.json({ msg: "Signout successful" });
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ msg: "Server error" });
+  }
+});
+
 
 // FORGOT PASSWORD send reset link
 router.post("/forgotpassword", async (req, res) => {
@@ -199,6 +217,18 @@ router.get("/resetverify/:resetToken", async (req, res) => {
   } catch (error) {
     console.error(error);
     res.send("Reset failed");
+  }
+});
+
+
+// GET all users
+router.get("/userslist", async (req, res) => {
+  try {
+    const users = await User.find({}); // fetch all users from MongoDB
+    res.json(users);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: "Server Error" });
   }
 });
 
