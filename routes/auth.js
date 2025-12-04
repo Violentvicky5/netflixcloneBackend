@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const User = require("../models/netflixUser");
+const DeletedUser =require("../models/deletedUser")
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
@@ -232,6 +233,32 @@ router.get("/userslist", async (req, res) => {
   }
 });
 
+//Remove users-
+
+router.delete("/removeuser/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findById(id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    await DeletedUser.create({
+      originalId: user._id,
+      name: user.name,
+      email: user.email,
+      plan: user.plan,
+      isVerified: user.isVerified
+    });
+
+    await User.deleteOne({ _id: id });
+
+    res.json({ success: true, message: "User moved to deleted collection" });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
 
 
 module.exports = router;
