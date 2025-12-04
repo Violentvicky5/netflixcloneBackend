@@ -3,8 +3,9 @@ require("dotenv").config(); // Load .env
 const express = require("express");
 const cors = require("cors");
 const connectDB = require("./config/db");
-const authRoutes = require("./routes/auth");
 
+const movieRoutes = require("./routes/movies");
+const authRoutes = require("./routes/auth");
 const app = express();
 
 // Connect to MongoDB
@@ -16,6 +17,8 @@ app.use(express.json());
 
 // Routes (no /api prefix)
 app.use("/", authRoutes);
+//moviesmanagemnt
+app.use("/api/movies", movieRoutes);
 
 // Start server
 const PORT = process.env.PORT || 5000;
