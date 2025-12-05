@@ -27,7 +27,7 @@ router.get("/grouped", async (req, res) => {
   try {
     const movies = await AddedMovie.find({});
 
-    // Group movies by category
+    
     const grouped = movies.reduce((acc, movie) => {
       const category = movie.category || "Other";
       if (!acc[category]) acc[category] = [];
@@ -42,16 +42,40 @@ router.get("/grouped", async (req, res) => {
   }
 });
 
-// GET /api/movies/banner
+
 // Fetch all movies from DB for banner
 router.get("/banner", async (req, res) => {
   try {
-    const movies = await AddedMovie.find({}); // get all movies
+    const movies = await AddedMovie.find({}); 
     res.json(movies);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Server error" });
   }
 });
+
+// Get all movies
+router.get("/deletemovies", async (req, res) => {
+  try {
+    const movies = await AddedMovie.find({});
+    res.json(movies);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Delete movie by ID
+router.delete("/:id", async (req, res) => {
+  try {
+    const movie = await AddedMovie.findByIdAndDelete(req.params.id);
+    if (!movie) return res.status(404).json({ message: "Movie not found" });
+    res.json({ message: "Movie deleted successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 
 module.exports = router;
