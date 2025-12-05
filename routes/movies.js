@@ -77,5 +77,10 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+router.get("/all", async (req, res) => {
+  const movies = await AddedMovie.find();
+  res.json(movies);
+});
+
 
 module.exports = router;

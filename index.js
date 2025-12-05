@@ -6,7 +6,7 @@ const connectDB = require("./config/db");
 
 const movieRoutes = require("./routes/movies");
 const authRoutes = require("./routes/auth");
-const adminStats =require("./routes/adminStats")
+const adminStats =require("./routes/adminStats");
 const app = express();
 
 // Connect to MongoDB
@@ -23,6 +23,8 @@ app.use("/", authRoutes);
 app.use("/api/movies", movieRoutes);
 //adminstats
 app.use("/api/admin", adminStats);
+
+
 
 // Start server
 const PORT = process.env.PORT || 5000;

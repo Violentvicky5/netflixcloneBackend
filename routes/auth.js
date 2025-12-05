@@ -19,18 +19,18 @@ const transporter = nodemailer.createTransport({
 
 // REGISTER
 router.post("/register", async (req, res) => {
-  const { email, password } = req.body;
+  const { userName, email, password } = req.body;
 
   try {
     let existing = await User.findOne({ email });
     if (existing) return res.status(400).json({ msg: "Email already exists" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
-
     const token = crypto.randomBytes(32).toString("hex");
     const tokenExpiry = Date.now() + 15 * 60 * 1000;
-
+  
     const user = new User({
+      userName,
       email,
       password: hashedPassword,
       token,
@@ -257,6 +257,35 @@ router.delete("/removeuser/:id", async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error" });
+  }
+});
+
+router.put("/updateplan", async (req, res) => {
+  const { email, planName, planPrice, planQuality } = req.body;
+console.log("incoming plan update",req.body);
+  try {
+    const accStart = new Date(); // current date
+    const accEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // +30 days
+
+    const user = await User.findOneAndUpdate(
+      { email },
+      {
+        plan: {
+          name: planName,
+          price: planPrice,
+          quality: planQuality,
+          start: accStart,
+          expiry: accEnd
+        }
+      },
+      { new: true }
+    );
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.json({ message: "Plan updated successfully", user });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
   }
 });
 
