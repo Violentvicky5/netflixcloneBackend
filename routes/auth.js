@@ -289,5 +289,36 @@ console.log("incoming plan update",req.body);
   }
 });
 
+//userprofile 
+router.get("/profile", async (req, res) => {
+  try {
+    const authHeader = req.headers["authorization"];
+    if (!authHeader)
+      return res.status(401).json({ message: "Token missing" });
+
+    const token = authHeader.split(" ")[1];
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const user = await User.findById(decoded.id);
+
+    if (!user)
+      return res.status(404).json({ message: "User not found" });
+
+    res.json({
+      userName: user.userName,
+      email: user.email,
+      plan: user.plan,
+      startDate: user.plan?.start,
+      expiryDate: user.plan?.expiry,
+       isVerified: user.isVerified,
+    });
+
+  } catch (error) {
+    console.error(error);
+    return res.status(403).json({ message: "Invalid or expired token" });
+  }
+});
+
 
 module.exports = router;
