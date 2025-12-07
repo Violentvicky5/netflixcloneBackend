@@ -1,4 +1,5 @@
 const express = require("express");
+const auths = require("../middlewares/auths")
 const router = express.Router();
 const AddedMovie = require("../models/addedMovie");
 
@@ -64,6 +65,33 @@ router.get("/deletemovies", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+router.get("/all", async (req, res) => {
+  const movies = await AddedMovie.find();
+  res.json(movies);
+});
+// Get movie by ID (for KnowMore overlay)
+router.get('/movie/:id',auths, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // If id is "all", return all movies
+    if (id === "all") {
+      const movies = await AddedMovie.find();
+      return res.json(movies);
+    }
+
+    // Otherwise treat it as ID
+    const movie = await AddedMovie.findById(id);
+    if (!movie) return res.status(404).json({ message: "Movie not found" });
+
+    res.json(movie);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 
 // Delete movie by ID
 router.delete("/:id", async (req, res) => {
@@ -77,10 +105,7 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-router.get("/all", async (req, res) => {
-  const movies = await AddedMovie.find();
-  res.json(movies);
-});
+
 
 
 module.exports = router;
