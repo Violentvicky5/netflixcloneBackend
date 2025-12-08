@@ -8,6 +8,7 @@ const movieRoutes = require("./routes/movies");
 const authRoutes = require("./routes/auth");
 const adminStats =require("./routes/adminStats");
 const watchList = require("./routes/watchList");
+const likedRoutes =require("./routes/liked");
 const app = express();
 
 // Connect to MongoDB
@@ -24,10 +25,13 @@ app.use("/", authRoutes);
 app.use("/api/movies", movieRoutes);
 //adminstats
 app.use("/api/admin", adminStats);
+//check
+
+
 //watchlist 
 app.use("/api/watchlist", watchList);
-
-
+//likedlist
+app.use("/api/liked", likedRoutes);
 
 // Start server
 const PORT = process.env.PORT || 5000;
