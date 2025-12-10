@@ -1,11 +1,15 @@
 const express = require("express");
 const router = express.Router();
 const User = require("../models/netflixUser");
-const DeletedUser =require("../models/deletedUser")
+const DeletedUser = require("../models/deletedUser");
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
- const jwt = require("jsonwebtoken");
+const jwt = require("jsonwebtoken");
+const { Resend } = require("resend");
+require("dotenv").config();
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Email Transporter
 const transporter = nodemailer.createTransport({
@@ -15,7 +19,6 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS,
   },
 });
-
 
 // REGISTER
 router.post("/register", async (req, res) => {
@@ -28,7 +31,7 @@ router.post("/register", async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const token = crypto.randomBytes(32).toString("hex");
     const tokenExpiry = Date.now() + 15 * 60 * 1000;
-  
+
     const user = new User({
       userName,
       email,
@@ -40,23 +43,33 @@ router.post("/register", async (req, res) => {
     await user.save();
 
     const verifyURL = `${process.env.BACKEND_URL}/verify/${token}`;
-
+    //old Gmail SMTP code
+   /*
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: email,
       subject: "Verify Your Email",
       html: `<h2>NetflixClone - Email Verification</h2>
-             <a href="${verifyURL}">Click to Verify</a>`,
+            <a href="${verifyURL}">Click to Verify</a>`,
     });
-
+    */
+    // new resend code
+    await resend.emails.send({
+      from: "Vicky <onboarding@resend.dev>",
+      to: email,
+      subject: "Verify Your Email - NetflixClone",
+      html: `
+    <h2>NetflixClone - Email Verification</h2>
+    <p>Hello ${userName}, please verify your email:</p>
+    <a href="${verifyURL}">Click to Verify</a>
+  `,
+    });
     res.json({ msg: "Verification email sent" });
-
   } catch (error) {
     console.error(error);
-res.status(500).json({ msg: "Server Error" });
+    res.status(500).json({ msg: "Server Error" });
   }
 });
-
 
 // VERIFY EMAIL
 router.get("/verify/:token", async (req, res) => {
@@ -77,13 +90,11 @@ router.get("/verify/:token", async (req, res) => {
     await user.save();
 
     res.send("Email Verified Successfully!");
-
   } catch (error) {
     console.error(error);
     res.send("Verification Failed");
   }
 });
-
 
 // SIGNIN
 router.post("/signin", async (req, res) => {
@@ -91,7 +102,8 @@ router.post("/signin", async (req, res) => {
 
   try {
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ msg: "Invalid Email or Password" });
+    if (!user)
+      return res.status(400).json({ msg: "Invalid Email or Password" });
 
     if (!user.isVerified)
       return res.status(401).json({ msg: "Please verify your email first" });
@@ -100,10 +112,9 @@ router.post("/signin", async (req, res) => {
     if (!isMatch)
       return res.status(400).json({ msg: "Invalid Email or Password" });
 
-
     const token = jwt.sign(
-      { id: user._id, email: user.email }, 
-      process.env.JWT_SECRET, 
+      { id: user._id, email: user.email },
+      process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
 
@@ -115,10 +126,9 @@ router.post("/signin", async (req, res) => {
         email: user.email,
       },
     });
-
   } catch (error) {
     console.error(error);
-res.status(500).json({ msg: "Server Error" });
+    res.status(500).json({ msg: "Server Error" });
   }
 });
 
@@ -140,14 +150,14 @@ router.post("/signOut", async (req, res) => {
   }
 });
 
-
 // FORGOT PASSWORD send reset link
 router.post("/forgotpassword", async (req, res) => {
   const { email } = req.body;
 
   try {
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ msg: "No user found with this email" });
+    if (!user)
+      return res.status(400).json({ msg: "No user found with this email" });
 
     if (!user.isVerified) {
       return res.status(401).json({ msg: "Please verify your email first" });
@@ -162,6 +172,8 @@ router.post("/forgotpassword", async (req, res) => {
 
     const resetURL = `${process.env.BACKEND_URL}/resetverify/${resetToken}`;
 
+    // Gmail SMTP old way
+    /*
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: email,
@@ -171,17 +183,30 @@ router.post("/forgotpassword", async (req, res) => {
         <p>This link expires in 15 minutes.</p>
         <a href="${resetURL}">Click to generate a new password</a>
       `,
-    });
+    }); 
+    */
+   // resend email-new way
+   try {
+      await resend.emails.send({
+        from: "Vicky <onboarding@resend.dev>",
+        to: email,
+        subject: "Reset Password - NetflixClone",
+        html: `
+          <h2>Password Reset Link</h2>
+          <p>Hello ${user.userName}, this link expires in 15 minutes.</p>
+          <a href="${resetURL}">Click to generate a new password</a>
+        `,
+      });
+    } catch (err) {
+      console.error("Email sending failed:", err);
+    }
 
     res.json({ msg: "Reset link sent to email" });
-
   } catch (error) {
     console.error(error);
-res.status(500).json({ msg: "Server Error" });
+    res.status(500).json({ msg: "Server Error" });
   }
 });
-
-
 
 // RESET VERIFY show temporary password
 router.get("/resetverify/:resetToken", async (req, res) => {
@@ -197,30 +222,26 @@ router.get("/resetverify/:resetToken", async (req, res) => {
       return res.send("Reset link expired");
     }
 
-    const plainNewPass = crypto.randomBytes(3).toString("hex"); 
+    const plainNewPass = crypto.randomBytes(3).toString("hex");
 
     const hashedPass = await bcrypt.hash(plainNewPass, 10);
 
-    
     user.password = hashedPass;
     user.resetToken = "";
     user.resetTokenExpiry = null;
     await user.save();
 
-    
     res.send(`
       <h2>Password Reset Successful</h2>
       <p>Your new password is:</p>
       <h3>${plainNewPass}</h3>
       <p>Please logIn using above Password</p>
     `);
-
   } catch (error) {
     console.error(error);
     res.send("Reset failed");
   }
 });
-
 
 // GET all users
 router.get("/userslist", async (req, res) => {
@@ -247,13 +268,12 @@ router.delete("/removeuser/:id", async (req, res) => {
       name: user.name,
       email: user.email,
       plan: user.plan,
-      isVerified: user.isVerified
+      isVerified: user.isVerified,
     });
 
     await User.deleteOne({ _id: id });
 
     res.json({ success: true, message: "User moved to deleted collection" });
-
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error" });
@@ -262,7 +282,7 @@ router.delete("/removeuser/:id", async (req, res) => {
 
 router.put("/updateplan", async (req, res) => {
   const { email, planName, planPrice, planQuality } = req.body;
-console.log("incoming plan update",req.body);
+  console.log("incoming plan update", req.body);
   try {
     const accStart = new Date(); // current date
     const accEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // +30 days
@@ -275,8 +295,8 @@ console.log("incoming plan update",req.body);
           price: planPrice,
           quality: planQuality,
           start: accStart,
-          expiry: accEnd
-        }
+          expiry: accEnd,
+        },
       },
       { new: true }
     );
@@ -289,12 +309,11 @@ console.log("incoming plan update",req.body);
   }
 });
 
-//userprofile 
+//userprofile
 router.get("/profile", async (req, res) => {
   try {
     const authHeader = req.headers["authorization"];
-    if (!authHeader)
-      return res.status(401).json({ message: "Token missing" });
+    if (!authHeader) return res.status(401).json({ message: "Token missing" });
 
     const token = authHeader.split(" ")[1];
 
@@ -302,8 +321,7 @@ router.get("/profile", async (req, res) => {
 
     const user = await User.findById(decoded.id);
 
-    if (!user)
-      return res.status(404).json({ message: "User not found" });
+    if (!user) return res.status(404).json({ message: "User not found" });
 
     res.json({
       userName: user.userName,
@@ -311,14 +329,12 @@ router.get("/profile", async (req, res) => {
       plan: user.plan,
       startDate: user.plan?.start,
       expiryDate: user.plan?.expiry,
-       isVerified: user.isVerified,
+      isVerified: user.isVerified,
     });
-
   } catch (error) {
     console.error(error);
     return res.status(403).json({ message: "Invalid or expired token" });
   }
 });
-
 
 module.exports = router;
