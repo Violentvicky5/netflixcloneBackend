@@ -8,6 +8,7 @@ const addedMovieSchema = new mongoose.Schema({
   poster: String,
   backdrop: String,
   category: String,
+  videoUrl: String,
 });
 
 module.exports = mongoose.model("AddedMovie", addedMovieSchema);

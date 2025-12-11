@@ -105,6 +105,20 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+//movie trailer by id
+router.get("/trailer/:id", auths, async (req, res) => {
+  try {
+    const movie = await AddedMovie.findOne({ tmdbId: req.params.id });
+
+    if (!movie) return res.status(404).json({ message: "Movie not found" });
+
+    res.json(movie);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
 
 
 

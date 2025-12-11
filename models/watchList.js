@@ -7,6 +7,7 @@ const MovieSchema = new mongoose.Schema({
   rating: Number,
   poster: String,
   category: String,
+  videoUrl: String,
   watchlisted: { type: Boolean, default: true },
   addedAt: { type: Date, default: Date.now }
 });

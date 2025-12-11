@@ -3,40 +3,54 @@ const auths = require("../middlewares/auths");
 const LikeList = require("../models/likeList");
 const router = express.Router();
 
-//add to liked list
+// ADD to LikeList
 router.post("/add", auths, async (req, res) => {
   try {
     const userId = req.user.id;
-    let { tmdbId, title, description, rating, poster, category } = req.body;
+
+    let {
+      tmdbId,
+      title,
+      description,
+      rating,
+      poster,
+      category,
+      videoUrl   // ✅ added videoUrl from req.body
+    } = req.body;
+
     tmdbId = Number(tmdbId);
     if (!tmdbId) return res.status(400).json({ message: "tmdbId is required" });
 
     let list = await LikeList.findOne({ userId });
 
-    // If no document - create one
+    // Create new likelist if not exists
     if (!list) {
       list = new LikeList({
         userId,
-        movies: [{
-          tmdbId,
-          title,
-          description,
-          rating,
-          poster,
-          category,
-          likelisted: true
-        }]
+        movies: [
+          {
+            tmdbId,
+            title,
+            description,
+            rating,
+            poster,
+            category,
+            videoUrl,       // ✅ SAVED HERE
+            likelisted: true
+          }
+        ]
       });
 
       await list.save();
       return res.json({ message: "Added to LikeList", data: list });
     }
 
-    // Check duplicate movie
+    // If already exists → do not add duplicate
     const exists = list.movies.some(movie => movie.tmdbId === tmdbId);
-    if (exists) return res.status(400).json({ message: "Already in LikeList" });
+    if (exists)
+      return res.status(400).json({ message: "Already in LikeList" });
 
-    // Push new movie
+    // Otherwise push new movie
     list.movies.push({
       tmdbId,
       title,
@@ -44,11 +58,11 @@ router.post("/add", auths, async (req, res) => {
       rating,
       poster,
       category,
+      videoUrl,       // ✅ SAVED HERE TOO
       likelisted: true
     });
 
     await list.save();
-
     res.json({ message: "Movie added", data: list });
 
   } catch (err) {
@@ -57,7 +71,7 @@ router.post("/add", auths, async (req, res) => {
   }
 });
 
-//like-remove api
+// REMOVE FROM LIKE LIST
 router.delete("/remove/:tmdbId", auths, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -77,7 +91,7 @@ router.delete("/remove/:tmdbId", auths, async (req, res) => {
   }
 });
 
-// Get user's likelist
+// GET user's likelist
 router.get("/my", auths, async (req, res) => {
   try {
     const userId = req.user.id;
@@ -90,7 +104,7 @@ router.get("/my", auths, async (req, res) => {
   }
 });
 
-// Check if a movie is in likelist
+// CHECK if movie exists in likelist
 router.get("/check/:tmdbId", auths, async (req, res) => {
   try {
     const userId = req.user.id;
