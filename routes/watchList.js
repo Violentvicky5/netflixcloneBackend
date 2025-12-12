@@ -7,7 +7,7 @@ const router = express.Router();
 router.post("/add", auths, async (req, res) => {
   try {
     const userId = req.user.id;
-    const { tmdbId, title, description, rating, poster, category } = req.body;
+    const { tmdbId, title, description, rating, poster, category, videoUrl } = req.body;
 
     if (!tmdbId) return res.status(400).json({ message: "tmdbId is required" });
 
@@ -24,6 +24,7 @@ router.post("/add", auths, async (req, res) => {
           rating,
           poster,
           category,
+          videoUrl,
           watchlisted: true
         }]
       });
@@ -44,6 +45,7 @@ router.post("/add", auths, async (req, res) => {
       rating,
       poster,
       category,
+      videoUrl,
       watchlisted: true
     });
 
