@@ -86,8 +86,8 @@ router.post("/register", async (req, res) => {
     const userEmail = email.trim();
     const response = await resend.emails.send({
       from: "NetflixClone  <onboarding@resend.dev>",
-      // to:userEmail,
-      to: "netflixmail387@gmail.com",
+       to:userEmail,
+     //to:"netflixmail387@gmail.com", incase userEmail is not receiving mails then use this line
       subject: `TestingStudyProject - resend email verification -  NetflixClone [${emailBodyToken.slice(
         0,
         6
@@ -245,8 +245,8 @@ router.post("/forgotpassword", async (req, res) => {
 
     await resend.emails.send({
       from: "netflixClone <onboarding@resend.dev>",
-     // to: email,
-      to: "netflixmail387@gmail.com",
+      to: email,
+      //to: "netflixmail387@gmail.com",
       subject: "Reset Password - NetflixClone",
       html: `
           <h2>Password Reset Link</h2>

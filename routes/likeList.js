@@ -15,7 +15,7 @@ router.post("/add", auths, async (req, res) => {
       rating,
       poster,
       category,
-      videoUrl   // ✅ added videoUrl from req.body
+      videoUrl   //added videoUrl from req.body
     } = req.body;
 
     tmdbId = Number(tmdbId);
@@ -23,7 +23,7 @@ router.post("/add", auths, async (req, res) => {
 
     let list = await LikeList.findOne({ userId });
 
-    // Create new likelist if not exists
+    //Create new likelist if not exists
     if (!list) {
       list = new LikeList({
         userId,
@@ -35,7 +35,7 @@ router.post("/add", auths, async (req, res) => {
             rating,
             poster,
             category,
-            videoUrl,       // ✅ SAVED HERE
+            videoUrl,       //SAVED HERE
             likelisted: true
           }
         ]
@@ -45,7 +45,7 @@ router.post("/add", auths, async (req, res) => {
       return res.json({ message: "Added to LikeList", data: list });
     }
 
-    // If already exists → do not add duplicate
+    // If already exists - do not add duplicate
     const exists = list.movies.some(movie => movie.tmdbId === tmdbId);
     if (exists)
       return res.status(400).json({ message: "Already in LikeList" });
@@ -58,7 +58,7 @@ router.post("/add", auths, async (req, res) => {
       rating,
       poster,
       category,
-      videoUrl,       // ✅ SAVED HERE TOO
+      videoUrl,       //SAVED HERE TOO
       likelisted: true
     });
 
