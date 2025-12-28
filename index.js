@@ -7,6 +7,7 @@ const connectDB = require("./config/db");
 const movieRoutes = require("./routes/movies");
 const authRoutes = require("./routes/auth");
 const adminStats =require("./routes/adminStats");
+const adminAuthRoutes = require("./routes/adminAuth");
 const watchList = require("./routes/watchList");
 const likeList =require("./routes/likeList");
 const app = express();
@@ -25,6 +26,8 @@ app.use("/", authRoutes);
 app.use("/api/movies", movieRoutes);
 //adminstats
 app.use("/api/admin", adminStats);
+// admin auth (signin)
+app.use("/api/admin", adminAuthRoutes);
 //check
 
 
