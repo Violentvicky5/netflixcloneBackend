@@ -12,7 +12,7 @@ require("dotenv").config();
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Email Transporter
-/*
+
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -20,7 +20,6 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS,
   },
 });
-*/
 
 // REGISTER
 router.post("/register", async (req, res) => {
@@ -47,14 +46,12 @@ router.post("/register", async (req, res) => {
     const verifyURL = `${process.env.BACKEND_URL}/verify/${token}`;
     //old Gmail SMTP code
     const emailBodyToken = crypto.randomBytes(8).toString("hex");
-    /*
+
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: email,
       subject: `Verify your email NetflixClone [${emailBodyToken.slice(0, 6)}]`,
-      html: 
-      `
-       <div style="font-family: Arial, sans-serif;">
+      html: `<div style="font-family: Arial, sans-serif;">
           <h2>NetflixClone Email Verification 🎬</h2>
 
           <p>Hello <strong>${userName}</strong>,</p>
@@ -63,8 +60,7 @@ router.post("/register", async (req, res) => {
             Please verify your email address to continue using NetflixClone.
           </p>
 
-          <a href="${verifyURL}"
-             style="display:inline-block;
+          <a href="${verifyURL}"      style="display:inline-block;
                     padding:10px 16px;
                     background:#e50914;
                     color:#fff;
@@ -80,20 +76,19 @@ router.post("/register", async (req, res) => {
         </div>
       `,
     });
-  */
+
     // new resend code
 
     const userEmail = email.trim();
-    const response = await resend.emails.send({
+    /* const response = await resend.emails.send ( {
       from: "NetflixClone  <onboarding@resend.dev>",
-       to:userEmail,
-     //to:"netflixmail387@gmail.com", incase userEmail is not receiving mails then use this line
+     //  to:userEmail,
+     to:"netflixmail387@gmail.com", //incase userEmail is not receiving mails then use this line
       subject: `TestingStudyProject - resend email verification -  NetflixClone [${emailBodyToken.slice(
         0,
         6
       )}]`,
-      html: `
-       <div style="font-family: Arial, sans-serif;">
+      html: ` <div style="font-family: Arial, sans-serif;">
           <h2>NetflixClone Email Verification</h2>
 
           <p>Hello <strong>${userName}</strong>,</p>
@@ -102,8 +97,7 @@ router.post("/register", async (req, res) => {
             Please verify your email address to continue using NetflixClone.
           </p>
 
-          <a href="${verifyURL}"
-             style="display:inline-block;
+          <a href="${verifyURL}" style="display:inline-block;
                     padding:10px 16px;
                     background:#e50914;
                     color:#fff;
@@ -118,13 +112,16 @@ router.post("/register", async (req, res) => {
           </p>
         </div>
       `,
-    });
-    console.log("Resend response:", response);
+    }); 
+
+    */
+    // console.log("Resend response:", response);
     res.json({ msg: "Verification email sent successfully" });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ msg: "Server Error" });
-  }
+  }catch (error) {
+  console.error("REGISTER ERROR:", error);
+  return res.status(500).json({ msg: error.message });
+}
+
 });
 
 // VERIFY EMAIL
@@ -171,7 +168,7 @@ router.post("/signin", async (req, res) => {
     const token = jwt.sign(
       { id: user._id, email: user.email },
       process.env.JWT_SECRET,
-      { expiresIn: "1h" }
+      { expiresIn: "1h" },
     );
 
     res.json({
@@ -229,7 +226,7 @@ router.post("/forgotpassword", async (req, res) => {
     const resetURL = `${process.env.BACKEND_URL}/resetverify/${resetToken}`;
 
     // Gmail SMTP old way
-    /*
+
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: email,
@@ -240,13 +237,13 @@ router.post("/forgotpassword", async (req, res) => {
         <a href="${resetURL}">Click to generate a new password</a>
       `,
     });
-*/
-    // resend email-new way
 
+    // resend email-new way
+    /*
     await resend.emails.send({
       from: "netflixClone <onboarding@resend.dev>",
-      to: email,
-      //to: "netflixmail387@gmail.com",
+      // to: email,
+      to: "netflixmail387@gmail.com",
       subject: "Reset Password - NetflixClone",
       html: `
           <h2>Password Reset Link</h2>
@@ -254,7 +251,7 @@ router.post("/forgotpassword", async (req, res) => {
           <a href="${resetURL}">Click to generate a new password</a>
         `,
     });
-
+*/
     res.json({ msg: "Reset link sent to email" });
   } catch (error) {
     console.error(error);
@@ -352,14 +349,14 @@ router.put("/updateplan", async (req, res) => {
           expiry: accEnd,
         },
       },
-      { new: true }
+      { new: true },
     );
 
     if (!user) return res.status(404).json({ message: "User not found" });
 
     res.json({ message: "Plan updated successfully", user });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+res.status(500).json({ message: error.message });
   }
 });
 
